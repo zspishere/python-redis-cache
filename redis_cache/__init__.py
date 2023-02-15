@@ -1,6 +1,7 @@
 from functools import wraps
 from json import dumps, loads
 from base64 import b64encode
+import sys
 
 
 def get_cache_lua_fn(client):
@@ -128,6 +129,22 @@ class CacheDecorator:
             serialized_data = str(b64encode(serialized_data), 'utf-8')
         return f'{self.prefix}:{self.namespace}:{serialized_data}'
 
+    def get_value(self, args, kwargs):
+        key = self.get_key(args, kwargs)
+        value = self.client.get(key)
+        if not value:
+            return None
+        return self.deserializer(value)
+
+    def get_ttl(self, args, kwargs):
+        key = self.get_key(args, kwargs)
+        expire_secs = self.client.ttl(key)
+        if expire_secs == -1:  # pesistent key
+            return sys.maxsize
+        elif expire_secs == -2:  # key does not exist
+            return None
+        return expire_secs
+
     def __call__(self, fn):
         self.namespace = self.namespace or f'{fn.__module__}.{fn.__qualname__}'
         self.keys_key = f'{self.prefix}:{self.namespace}:keys'
@@ -146,6 +163,9 @@ class CacheDecorator:
                 result = self.deserializer(result)
             return result
 
+        inner.get_key = self.get_key
+        inner.get_value = self.get_value
+        inner.get_ttl = self.get_ttl
         inner.invalidate = self.invalidate
         inner.invalidate_all = self.invalidate_all
         inner.copy_old_keys = self.copy_old_keys

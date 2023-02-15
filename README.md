@@ -58,7 +58,7 @@ cache = RedisCache(redis_client, prefix="rc", serializer=dumps, deserializer=loa
 cache.cache(ttl=..., limit=..., namespace=...) -> Callable[[Callable], Callable]
 
 # Get multiple values from the cache
-cache.mget([{"fn": my_func, "args": [1,2], "kwargs": {}}, ...]) -> List[Any]
+cache.mget(*[{"fn": my_func, "args": [1,2], "kwargs": {}}, ...]) -> List[Any]
 
 Redis
 
